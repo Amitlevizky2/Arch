@@ -1,4 +1,3 @@
-
 %macro print_t 2
     push %1
     push %2
@@ -20,8 +19,18 @@
         push dword %1
         call random_number 
         add esp, 4
-    %endmacro
+%endmacro
 
+%macro allocateCo_routine 1
+	push STKSZ
+	call malloc                     ; Allocate stack size
+	add esp, 4
+	mov ebx, dword [CORS]
+	add ebx, dword edi
+	add eax, STKSZ 					; set in eax the address of the end of the stack
+	mov [ebx], %1
+    mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
+%endmacro
 
 %macro callscanf 3
     push dword %1                   ; arg3
@@ -81,11 +90,11 @@ section .bss
 
     ;------------Co-routines fields------------;
     CURR: resd 1
-    SPT: resd 1
-    SPMAIN: resd 1
-    STKSZ equ 16*1024
-    CODEP equ 0
-    SPP equ 4
+    SPT: resd 1 						; temporary stack pointer
+    SPMAIN: resd 1						; stack pointer of main
+    STKSZ equ 16*1024					; co-routine stack size
+    CODEP equ 0 						; offset of pointer to co-routine function in co-routine struct 
+    SPP equ 4 							; offset of pointer to co-routine stack in co-routine struct 
     
 
 
@@ -95,13 +104,15 @@ section .text                           ; functions from c libary
   align 16
      global main 
      global random_number
+	 extern drone
+	 extern target
+	 extern scheduler
+	 extern printer
      extern printf 
      extern fprintf
      extern sscanf
      extern malloc
      extern free
-     extern mayDestroy
-
 main:
 
     mov eax, dword [esp + 8]
@@ -138,12 +149,12 @@ main:
         xor ecx, ecx
         xor ebx, ebx
         mov ecx, [N]                    ; Number of co-routins
-        add ecx, dword 2                ; Plus the printer and schedual co-routines
+        ;add ecx, dword 2                ; Plus the printer and schedual co-routines
         cmp dword [N], 0                ; Check the Co-routine number > 0
         je endAlcCoRou
         pushad                          ; Saves the state of the registers
-        ;mov ebx, (N+2)*8                   ; Set size for allocation to be (4 + 4) * (N + 2)
-        ;dec ecx                            ; After alloc the first co-routine
+        ;mov ebx, (N+2)*8               ; Set size for allocation to be (4 + 4) * (N + 2)
+        ;dec ecx                        ; After alloc the first co-routine
         push STKSZ                      ; parameter to malloc
         call malloc
         add esp, 4
@@ -155,17 +166,37 @@ main:
 
         allocLoop:
             pushad
-            push STKSZ
-            call malloc                     ; Allocate stack size
-            add esp, 4
-            mov ebx, dword [CORS]
-            add ebx, dword edi
-            mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
+            allocateCo_routine dword drone 	; macro to create drone co-routine
             popad
             add edi, dword 8
             loop allocLoop, ecx
-        
+		    xor ebx, ebx
+		
+		allocScheduler:
+			pushad
+			allocateCo_routine dword scheduler 	; macro to create scheduler co-routine
+			popad
+		add edi, dword 8
+		
+		allocTarget:
+			pushad
+			allocateCo_routine dword target 	; macro to create target co-routine
+			popad
+		add edi, dword 8
+		
+		allocPrinter:
+			pushad
+			allocateCo_routine dword printer 	; macro to create printer co-routine
+			popad
+		
         endAlcCoRou:
+
+		initCoLoop:
+
+
+
+
+
         create_random distance
         print_float
         create_random degree
@@ -177,8 +208,8 @@ main:
         startFunction               ; get co-routine ID number
         mov ebx, [4*ebx + CORS]     ; get pointer to COi struct
         mov eax, [ebx+CODEP]        ; get initial EIP value – pointer to COi function
-        mov [SPT], ESP              ; save ESP value
-        mov esp, [EBX+SPP]          ; get initial ESP value – pointer to COi stack
+        mov [SPT], esp              ; save ESP value
+        mov esp, [ebx+SPP]          ; get initial ESP value – pointer to COi stack
         push eax                    ; push initial “return” address
         pushfd                      ; push flags
         pushad                      ; push all other registers
