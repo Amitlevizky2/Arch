@@ -6,6 +6,16 @@
     add esp, 8
 %endmacro
 
+%macro print_float 0
+    fld qword [res]
+    sub esp,8
+    fstp qword [esp]
+    push format_string_2f
+    call printf
+    add esp,12
+    %endmacro
+
+
 %macro create_random 1
         push dword %1
         call random_number 
@@ -51,6 +61,7 @@ section .data
     format_string_int: db "%d", 10, 0   ; format string int
     format_string_float: db "%f", 10, 0 ; format string float
     format_string_floatl: db "%lf", 10, 0 ; format string float
+    format_string_2f: db "%.2f",10,0 ; float 2 numbers after dot
     degree equ 360
     distance equ 100
     maxint: dd 0xffff
@@ -155,6 +166,10 @@ main:
             loop allocLoop, ecx
         
         endAlcCoRou:
+        create_random distance
+        print_float
+        create_random degree
+        print_float
         jmp endAss3
     
     ;----------initCo Function---------;
@@ -221,4 +236,3 @@ main:
 
 
 endAss3:
-	
