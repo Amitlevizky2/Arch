@@ -26,7 +26,9 @@
 	call malloc                     ; Allocate stack size
 	add esp, 4
 	mov ebx, dword [CORS]
-	add ebx, dword edi
+	add ebx, edi
+	mov ebx, [ebx]
+	;add ebx, dword SPP
 	add eax, STKSZ 					; set in eax the address of the end of the stack
 	mov [ebx], %1
     mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
@@ -76,6 +78,8 @@ section .data
     maxint: dd 0xffff
     bignum: DD 0
     res : dd 0
+	struct_len equ 8
+	SPP equ 4 							; offset of pointer to co-routine stack in co-routine struct 
 
 
 
@@ -94,7 +98,7 @@ section .bss
     SPMAIN: resd 1						; stack pointer of main
     STKSZ equ 16*1024					; co-routine stack size
     CODEP equ 0 						; offset of pointer to co-routine function in co-routine struct 
-    SPP equ 4 							; offset of pointer to co-routine stack in co-routine struct 
+    
     
 
 
@@ -149,13 +153,13 @@ main:
         xor ecx, ecx
         xor ebx, ebx
         mov ecx, [N]                    ; Number of co-routins
-        ;add ecx, dword 2                ; Plus the printer and schedual co-routines
+        add ecx, dword 3                ; Plus the printer and schedual co-routines
         cmp dword [N], 0                ; Check the Co-routine number > 0
         je endAlcCoRou
-        pushad                          ; Saves the state of the registers
-        ;mov ebx, (N+2)*8               ; Set size for allocation to be (4 + 4) * (N + 2)
-        ;dec ecx                        ; After alloc the first co-routine
-        push STKSZ                      ; parameter to malloc
+        pushad
+
+		shl ecx, 2 						; multiply by 4
+        push ecx                        ; allocate array of (4*N) bytes
         call malloc
         add esp, 4
         mov dword [CORS], eax           ; eax keeps the address to the alocated memory
@@ -163,26 +167,40 @@ main:
 
         xor edi, edi
         xor ebx, ebx
+		mov edi, [CORS]
 
-        allocLoop:
+		allocStructsLoop:
+			pushad
+			push struct_len 			; malloc with 8 bytes
+			call malloc
+			add esp, 4 			
+			mov [edi + ebx], eax		; in the i'th cell of CORS array put the new allocated address
+			popad
+			add ebx, dword 4
+		loop allocStructsLoop, ecx
+
+
+		xor edi, edi
+		mov ecx, dword [N]
+        allocDroneLoop:
             pushad
             allocateCo_routine dword drone 	; macro to create drone co-routine
             popad
-            add edi, dword 8
-            loop allocLoop, ecx
-		    xor ebx, ebx
+            add edi, dword 4
+        loop allocDroneLoop, ecx
 		
+		xor ebx, ebx
 		allocScheduler:
 			pushad
 			allocateCo_routine dword scheduler 	; macro to create scheduler co-routine
 			popad
-		add edi, dword 8
+		add edi, dword 4
 		
 		allocTarget:
 			pushad
 			allocateCo_routine dword target 	; macro to create target co-routine
 			popad
-		add edi, dword 8
+		add edi, dword 4
 		
 		allocPrinter:
 			pushad
@@ -191,9 +209,19 @@ main:
 		
         endAlcCoRou:
 
+		xor ecx, ecx
+		xor edi, edi
+		mov ecx, dword [N]
+		add ecx, dword 3
+		
 		initCoLoop:
-
-
+			pushad
+			push edi
+			call initCo
+			add esp, 4
+			popad
+			inc edi
+		loop initCoLoop, ecx
 
 
 
@@ -206,15 +234,17 @@ main:
     ;----------initCo Function---------;
     initCo:
         startFunction               ; get co-routine ID number
-        mov ebx, [4*ebx + CORS]     ; get pointer to COi struct
+		mov edx, dword[CORS]
+        mov ebx, [4*ebx + edx]      ; get pointer to COi struct
         mov eax, [ebx+CODEP]        ; get initial EIP value – pointer to COi function
         mov [SPT], esp              ; save ESP value
+		mov esi, dword [ebx + SPP]
         mov esp, [ebx+SPP]          ; get initial ESP value – pointer to COi stack
         push eax                    ; push initial “return” address
         pushfd                      ; push flags
         pushad                      ; push all other registers
         mov [ebx+SPP], esp          ; save new SPi value (after all the pushes)
-        mov ESP, [SPT]              ; restore ESP value
+        mov esp, [SPT]              ; restore ESP value
         endFunction
     ;----------end initCo Function---------;
     
