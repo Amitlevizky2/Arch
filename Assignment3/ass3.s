@@ -27,7 +27,14 @@
 		mov 	esp, ebp
 		pop 	ebp
 		ret
-	%endmacro
+%endmacro
+	
+%macro endFunctionParameter 0
+        mov     eax, dword[ebp-4]
+        mov     esp, ebp
+        pop     ebp
+        ret
+%endmacro
 
 
 section .data
@@ -36,6 +43,11 @@ section .data
 	down :db '',10,0
 	format_string_int: db "%d", 10, 0	; format string int
 	format_string_float: db "%f", 10, 0	; format string float
+	degree equ 360
+        distance equ 100
+        maxint equ 65535
+        bignum equ 65535
+        res equ 65535
 
 
 
@@ -155,6 +167,56 @@ main:
 		mov ESP, [SPT]	            ; restore ESP value
 		endFunction
 	;----------end initCo Function---------;
+	
+	
+	
+	random_number:
+        startFunction
+        mov ebx,dword[ebp+8]
+        mov dword [bignum],ebx
+
+
+ LFSR:  
+        
+        mov edi,15
+        looplfsr:
+        cmp edi,0
+        je end1
+        mov eax, 1
+        mov esi, 1
+        xor ebx, ebx
+        mov ebx, [seed]
+        and eax, ebx                ;find the 16 bit
+        shr  ebx, 2
+        and esi, ebx                ;find the 14 bit
+        xor eax, esi                ;xor 16's bit with 14's bit
+        shr  ebx, 1
+        mov esi, 1
+        and esi, ebx                ;find the 13 bit
+        xor eax, esi                ;xor previos xor result of bit with 13s bit
+        shr  ebx, 2
+        mov esi, 1
+        and esi, ebx                 ;find the 11 bit
+        xor eax, esi                ;xor previos xor result of bit with 11s bit
+        shl eax,  15
+        shr dword[seed], 1
+        xor dword [seed], eax       ;genatate the new seed number
+        dec edi
+        jmp looplfsr
+        end1:
+
+    scaling:
+        finit
+        fild dword [bignum]
+        fild dword [maxint]
+        fdiv
+        fild dword [seed]
+        fmul
+        fstp qword [res]
+    endFunction
+
+        end:
+        print_t dword [seed]
 	 
 	
 
