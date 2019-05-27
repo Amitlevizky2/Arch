@@ -30,6 +30,7 @@
 	mov ebx, [ebx]
 	;add ebx, dword SPP
 	add eax, STKSZ 					; set in eax the address of the end of the stack
+	mov esi, dword %1
 	mov [ebx], %1
     mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
 %endmacro
@@ -91,6 +92,9 @@ section .bss
     d : rest 1                          ; Maximum distance that allows to destroy a target
     seed : resd 1                       ; Seed for initialization of LFSR shift register
     CORS : resd 1                       ; Number of all the co-routines in the program
+	schedulerCo : resd 1 				; Pointer to scheduler co-routine
+	targetCo : resd 1 					; Pointer to target co-routine
+	printerCo : resd 1					; Pointer to printer co-routine
 
     ;------------Co-routines fields------------;
     CURR: resd 1
@@ -118,9 +122,7 @@ section .text                           ; functions from c libary
      extern malloc
      extern free
 main:
-
     mov eax, dword [esp + 8]
-
     getArgsValues:
         pushad
         callscanf N, format_string_int, dword [eax + 4]     ; Number of drones
@@ -145,6 +147,11 @@ main:
         pushad
         callscanf seed, format_string_int, dword [eax + 24] ; Seed for initialization of LFSR shift register
         popad
+	call AlcCoRoutins
+	;call initCoLoop
+	call preInitCoLoop
+	call startCo
+	jmp endAss3
 
             
      
@@ -178,7 +185,20 @@ main:
 			popad
 			add ebx, dword 4
 		loop allocStructsLoop, ecx
-
+		
+		saveCoNumbers:
+		mov esi, dword [N]
+		inc esi
+		shl esi, 2
+		mov dword [schedulerCo], esi	; save the co-routine number of scheduler
+		shr esi, 2
+		inc esi
+		shl esi, 2
+		mov dword [targetCo], esi		; save the co-routine number of target
+		shr esi, 2
+		inc esi
+		shl esi, 2
+		mov dword [printerCo], esi		; save the co-routine number of printer
 
 		xor edi, edi
 		mov ecx, dword [N]
@@ -208,28 +228,31 @@ main:
 			popad
 		
         endAlcCoRou:
+		ret
 
-		xor ecx, ecx
-		xor edi, edi
-		mov ecx, dword [N]
-		add ecx, dword 3
+	preInitCoLoop:
+	xor ecx, ecx
+	xor edi, edi
+	mov ecx, dword [N]
+	add ecx, dword 3
 		
-		initCoLoop:
-			pushad
-			push edi
-			call initCo
-			add esp, 4
-			popad
-			inc edi
-		loop initCoLoop, ecx
+	initCoLoop:
+		pushad
+		push edi
+		call initCo 			; for every co-routine performe a initialization
+		add esp, 4
+		popad
+		inc edi
+	loop initCoLoop, ecx
+	ret
 
 
 
-        create_random distance
-        print_float
-        create_random degree
-        print_float
-        jmp endAss3
+    create_random distance
+    print_float
+	create_random degree
+    print_float
+    jmp endAss3
     
     ;----------initCo Function---------;
     initCo:
@@ -248,13 +271,42 @@ main:
         endFunction
     ;----------end initCo Function---------;
     
+	;----------initCo Function---------;
+    startCo:
+		pushad 							; save registers of main ()
+		mov [SPMAIN], esp 				; save ESP of main ()
+		mov ebx, dword [CORS] 			; gets ID of a scheduler co-routine
+		add ebx, dword [schedulerCo] 	; gets a pointer to a scheduler struct
+				;sub ebx, dword 4
+				mov esi, [ebx]
+				mov esi, [esi]
+				mov ebx, [ebx]
+		jmp do_resume 					; resume a scheduler co-routine
+
+	endCo:
+		mov esp, [SPMAIN] 				; restore ESP of main()
+		popad							; restore registers of main()
+		ret
+
+	resume:  							; save state of current co-routine
+		pushfd
+		pushad
+		mov edx, [CURR]
+		mov [edx+SPP], esp 				; save current ESP
     
-   
+	do_resume: 							; load ESP for resumed co-routine
+		mov esp, [ebx + SPP]
+		mov [CURR], ebx
+		popad
+		popfd
+		ret
+	
+	;----------random_number Function---------;
     random_number:
         startFunction
         mov dword [bignum],ebx
 
- LFSR:  
+ 		LFSR:  
         mov edi,16
         looplfsr:
         cmp edi,0
@@ -283,17 +335,18 @@ main:
         end1:
         
 
-    scaling:
-        finit
-        fild dword [bignum]
-        fild dword [maxint]
-        fdiv
-        fild dword [seed]
-        fmul
-        fstp qword [res] 
-    endFunction
-
+		scaling:
+			finit
+			fild dword [bignum]
+			fild dword [maxint]
+			fdiv
+			fild dword [seed]
+			fmul
+			fstp qword [res] 
+		endFunction
+	;----------end random_number Function---------;
     
+	freeMemoryBeforeExit:
 
 
 endAss3:
