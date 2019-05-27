@@ -84,25 +84,7 @@ section .data
 
 
 
-section .bss
-    N : resd 1                          ; Number of drones
-    T : resd 1                          ; Number of targets to destroy to win the game
-    K : resd 1                          ; How many drone steps between game board printings
-    beta : rest 1                       ; Angle of drone field-of-view
-    d : rest 1                          ; Maximum distance that allows to destroy a target
-    seed : resd 1                       ; Seed for initialization of LFSR shift register
-    CORS : resd 1                       ; Number of all the co-routines in the program
-	schedulerCo : resd 1 				; Pointer to scheduler co-routine
-	targetCo : resd 1 					; Pointer to target co-routine
-	printerCo : resd 1					; Pointer to printer co-routine
 
-    ;------------Co-routines fields------------;
-    CURR: resd 1
-    SPT: resd 1 						; temporary stack pointer
-    SPMAIN: resd 1						; stack pointer of main
-    STKSZ equ 16*1024					; co-routine stack size
-    CODEP equ 0 						; offset of pointer to co-routine function in co-routine struct 
-    
     
 
 
@@ -112,6 +94,20 @@ section .text                           ; functions from c libary
   align 16
      global main 
      global random_number
+     global N
+     global T
+     global K
+     global seed
+     global beta
+     global d
+     global AlcCoRoutins
+     global preInitCoLoop
+     global startCo
+     global CORS
+     global schedulerCo
+     global targetCo
+     global printerCo
+     global resume
 	 extern drone
 	 extern target
 	 extern scheduler
@@ -350,3 +346,23 @@ main:
 
 
 endAss3:
+
+section .bss
+    N : resd 1                          ; Number of drones
+    T : resd 1                          ; Number of targets to destroy to win the game
+    K : resd 1                          ; How many drone steps between game board printings
+    beta : rest 1                       ; Angle of drone field-of-view
+    d : rest 1                          ; Maximum distance that allows to destroy a target
+    seed : resd 1                       ; Seed for initialization of LFSR shift register
+    CORS : resd 1                       ; Number of all the co-routines in the program
+	schedulerCo : resd 1 				; Pointer to scheduler co-routine
+	targetCo : resd 1 					; Pointer to target co-routine
+	printerCo : resd 1					; Pointer to printer co-routine
+
+    ;------------Co-routines fields------------;
+    CURR: resd 1
+    SPT: resd 1 						; temporary stack pointer
+    SPMAIN: resd 1						; stack pointer of main
+    STKSZ equ 16*1024					; co-routine stack size
+    CODEP equ 0 						; offset of pointer to co-routine function in co-routine struct 
+    
