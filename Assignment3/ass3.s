@@ -5,13 +5,15 @@
     add esp, 8
 %endmacro
 
-%macro print_float 0
-    fld qword [res]
+%macro print_float 1
+    pushad
+    fld qword %1
     sub esp,8
     fstp qword [esp]
     push format_string_2f
     call printf
     add esp,12
+    popad
     %endmacro
 
 
@@ -52,7 +54,6 @@
 %endmacro
 
 %macro endFunction 0
-        popa
         mov     esp, ebp
         pop     ebp
         ret
@@ -91,6 +92,7 @@ section .data
     bignum: DD 0
     res : dd 0
 	struct_len equ 8
+    drone_struct_len equ 28
 	SPP equ 4 							; offset of pointer to co-routine stack in co-routine struct 
 
 
@@ -150,7 +152,7 @@ main:
         callscanf seed, format_string_int, dword [eax + 24] ; Seed for initialization of LFSR shift register
         popad
 	call AlcCoRoutins
-    ;call initDronesArray
+    call initDronesArray
 	call preInitCoLoop
 	call startCo
 	jmp endAss3
@@ -234,8 +236,62 @@ main:
 
 	
     initDronesArray:
-        mov ecx, dword [N]
+        preInitDrone:
+        mov ecx, dword [N]                          ; Number of drones
+        pushad
+        shl ecx, 2                                  ; N*4 to compute the size of the array
+        push ecx
+        call malloc
+        add esp, 4
+        mov dword [dronesArray], eax                ; Set dronesArray to point to the array that was allocated
+        popad
 
+        xor esi, esi
+        initDroneLoop:
+        cmp ecx, dword 0
+        je endDroneInit
+        mov ebx, dword [dronesArray]                ; The array
+        add ebx, esi                                ; the right drone index
+        push drone_struct_len                       ; size of struct for each drone
+        pushad
+        call malloc
+        popad
+        add esp, 4
+        mov dword [ebx], eax                        ; set pointer to the new allocated space
+        
+        initRandomDroneValues:
+        xor edx, edx
+        pushad
+        generate_num edx, distance                  ; Get X random value
+        popad
+        fld qword [res]                             ; load res to the first cell in stack
+        fstp qword [ebx + xPlace]                   ; put it at the place ebx point at
+        ;print_float qword [ebx + xPlace]
+
+        xor edx, edx
+        pushad
+        generate_num edx, distance                  ; Get Y random value
+        popad
+        fld qword [res]                             ; load res to the first cell in stack
+        fstp qword [ebx + yPlace]                   ; put it at the place ebx point at
+        ;print_float qword [ebx + yPlace]
+
+        xor edx, edx
+        pushad
+        generate_num edx, degree                    ; Get alpha random value
+        popad
+        fld qword [res]                             ; load res to the first cell in stack
+        fstp qword [ebx + alphaPlace]               ; put it at the place ebx point at
+        ;print_float qword [ebx + alphaPlace]
+
+        mov dword [ebx + targetsPlace], 0           ; put targets destroyed to be 0
+        add esi, dword 4
+        dec ecx
+        jmp initDroneLoop
+        endDroneInit:
+        ret
+
+        
 
     preInitCoLoop:
 	xor ecx, ecx
@@ -255,7 +311,7 @@ main:
 
     mov ebx,50
     generate_num ebx ,distance
-    print_float
+    ;print_float
     mov edx ,0
 	;generate_num  degree
     ;print_float
@@ -374,6 +430,15 @@ section .bss
 	schedulerCo : resd 1 				; Pointer to scheduler co-routine
 	targetCo : resd 1 					; Pointer to target co-routine
 	printerCo : resd 1					; Pointer to printer co-routine
+    xValue : resq 1
+    yValue : resq 1
+    alphValue : resq 1
+    struc drone_struc
+        xPlace : resq 1
+        yPlace : resq 1
+        alphaPlace : resq 1
+        targetsPlace : resd 1
+    endstruc
 
     ;------------Co-routines fields------------;
     CURR: resd 1
