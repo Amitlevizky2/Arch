@@ -65,6 +65,17 @@
         ret
 %endmacro
 
+%macro zero_q 1
+    mov dword [%1],0
+    mov dword [%1+4],0
+%endmacro
+
+%macro generate_num 2
+        push %1
+        push %2
+        call random_number
+        add esp,8
+%endmacro
 
 section .data
     format_string_s : db "%s",0 
@@ -84,12 +95,6 @@ section .data
 
 
 
-
-    
-
-
-
-
 section .text                           ; functions from c libary
   align 16
      global main 
@@ -104,6 +109,7 @@ section .text                           ; functions from c libary
      global preInitCoLoop
      global startCo
      global CORS
+     global dronesArray
      global schedulerCo
      global targetCo
      global printerCo
@@ -144,7 +150,7 @@ main:
         callscanf seed, format_string_int, dword [eax + 24] ; Seed for initialization of LFSR shift register
         popad
 	call AlcCoRoutins
-	;call initCoLoop
+    ;call initDronesArray
 	call preInitCoLoop
 	call startCo
 	jmp endAss3
@@ -183,18 +189,18 @@ main:
 		loop allocStructsLoop, ecx
 		
 		saveCoNumbers:
-		mov esi, dword [N]
-		inc esi
-		shl esi, 2
-		mov dword [schedulerCo], esi	; save the co-routine number of scheduler
-		shr esi, 2
-		inc esi
-		shl esi, 2
-		mov dword [targetCo], esi		; save the co-routine number of target
-		shr esi, 2
-		inc esi
-		shl esi, 2
-		mov dword [printerCo], esi		; save the co-routine number of printer
+            mov esi, dword [N]
+            inc esi
+            shl esi, 2
+            mov dword [schedulerCo], esi	; save the co-routine number of scheduler
+            shr esi, 2
+            inc esi
+            shl esi, 2
+            mov dword [targetCo], esi		; save the co-routine number of target
+            shr esi, 2
+            inc esi
+            shl esi, 2
+            mov dword [printerCo], esi		; save the co-routine number of printer
 
 		xor edi, edi
 		mov ecx, dword [N]
@@ -226,7 +232,12 @@ main:
         endAlcCoRou:
 		ret
 
-	preInitCoLoop:
+	
+    initDronesArray:
+        mov ecx, dword [N]
+
+
+    preInitCoLoop:
 	xor ecx, ecx
 	xor edi, edi
 	mov ecx, dword [N]
@@ -242,12 +253,12 @@ main:
 	loop initCoLoop, ecx
 	ret
 
-
-
-    create_random distance
+    mov ebx,50
+    generate_num ebx ,distance
     print_float
-	create_random degree
-    print_float
+    mov edx ,0
+	;generate_num  degree
+    ;print_float
     jmp endAss3
     
     ;----------initCo Function---------;
@@ -298,11 +309,11 @@ main:
 		ret
 	
 	;----------random_number Function---------;
-    random_number:
-        startFunction
-        mov dword [bignum],ebx
-
- 		LFSR:  
+     random_number:
+        push    ebp
+        mov     ebp, esp
+        sub esp,4
+ LFSR:  
         mov edi,16
         looplfsr:
         cmp edi,0
@@ -331,15 +342,19 @@ main:
         end1:
         
 
-		scaling:
-			finit
-			fild dword [bignum]
-			fild dword [maxint]
-			fdiv
-			fild dword [seed]
-			fmul
-			fstp qword [res] 
-		endFunction
+    scaling:
+        finit
+        fild dword [ebp+8]
+        fild dword [ebp+12]
+        fsub
+        fild dword [maxint]
+        fdiv
+        fild dword [seed]
+        fmul
+        fild dword [ebp+12]
+        fadd
+        fstp qword [res]
+    endFunction
 	;----------end random_number Function---------;
     
 	freeMemoryBeforeExit:
@@ -355,6 +370,7 @@ section .bss
     d : rest 1                          ; Maximum distance that allows to destroy a target
     seed : resd 1                       ; Seed for initialization of LFSR shift register
     CORS : resd 1                       ; Number of all the co-routines in the program
+    dronesArray : resd 1                ; Array to keep each drone details
 	schedulerCo : resd 1 				; Pointer to scheduler co-routine
 	targetCo : resd 1 					; Pointer to target co-routine
 	printerCo : resd 1					; Pointer to printer co-routine
