@@ -31,6 +31,7 @@
 	add ebx, edi
 	mov ebx, [ebx]
 	;add ebx, dword SPP
+    mov dword [ebx + 12], eax
 	add eax, STKSZ 					; set in eax the address of the end of the stack
 	mov esi, dword %1
 	mov [ebx], %1
@@ -45,6 +46,7 @@
 	add ebx, edi
 	mov ebx, [ebx]
 	;add ebx, dword SPP
+    mov dword [ebx + 12], eax
 	add eax, STKSZ 					; set in eax the address of the end of the stack
 	mov esi, dword %1
 	mov [ebx], %1
@@ -106,7 +108,7 @@ section .data
     maxint: dd 0xffff
     bignum: DD 0
     res : dd 0
-	struct_len equ 12
+	struct_len equ 16
     drone_struct_len equ 28
 	SPP equ 4 							; offset of pointer to co-routine stack in co-routine struct 
 
@@ -430,10 +432,64 @@ main:
     endFunction
 	;----------end random_number Function---------;
     
-	freeMemoryBeforeExit:
+
+freeMemoryBeforeExit:
+    xor ecx, ecx
+    xor esi, esi
+    mov ecx, [N]
+    add ecx, dword 3
+    mov eax, dword [CORS]
+
+    freeStackLoop:
+        mov ebx, dword [eax]
+        mov ebx, dword [ebx +12]
+        pushad
+        push ebx
+        call free
+        add esp, 4
+        popad
+        add eax, dword 4
+    loop freeStackLoop, ecx
+
+    xor ecx, ecx
+    mov ecx, [N]
+    add ecx, dword 3
+    mov eax, dword [CORS]
+
+    freeStructLoop:
+        mov ebx, dword [eax]
+        pushad
+        push ebx
+        call free
+        add esp, 4
+        popad
+        add eax, dword 4
+    loop freeStructLoop, ecx
+
+    xor ecx, ecx
+    mov ecx, [N]
+    mov eax, dword [dronesArray]
+
+    freeDronesArrayLoop:
+        pushad
+        push eax
+        call free
+        add esp, 4
+        popad
+        add eax, 4
+    loop freeDronesArrayLoop, ecx
 
 
+    mov eax, [CORS]
+    push eax
+    call free
+    add esp, 4
 
+    mov eax, [dronesArray]
+    push eax
+    call free
+    add esp, 4
+    jmp endAss3
 endAss3:
 
 
