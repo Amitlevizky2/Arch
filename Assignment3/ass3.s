@@ -24,17 +24,33 @@
 %endmacro
 
 %macro allocateCo_routine 1
-    push STKSZ
-    call malloc                     ; Allocate stack size
-    add esp, 4
-    mov ebx, dword [CORS]
-    add ebx, edi
-    mov ebx, [ebx]
-    ;add ebx, dword SPP
-    add eax, STKSZ                  ; set in eax the address of the end of the stack
-    mov esi, dword %1
-    mov [ebx], %1
+	push STKSZ
+	call malloc                     ; Allocate stack size
+	add esp, 4
+	mov ebx, dword [CORS]
+	add ebx, edi
+	mov ebx, [ebx]
+	;add ebx, dword SPP
+    mov dword [ebx + 12], eax
+	add eax, STKSZ 					; set in eax the address of the end of the stack
+	mov esi, dword %1
+	mov [ebx], %1
     mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
+%endmacro
+
+%macro allocateCo_routine_drone 2
+	push STKSZ
+	call malloc                     ; Allocate stack size
+	add esp, 4
+	mov ebx, dword [CORS]
+	add ebx, edi
+	mov ebx, [ebx]
+	;add ebx, dword SPP
+    mov dword [ebx + 12], eax
+	add eax, STKSZ 					; set in eax the address of the end of the stack
+	mov [ebx], %1
+    mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
+    mov dword [ebx + 8], %2
 %endmacro
 
 %macro callscanf 3
@@ -79,6 +95,7 @@
 %endmacro
 
                          ; offset of pointer to co-routine stack in co-routine struct 
+
 
 
 
@@ -157,7 +174,7 @@ main:
         je endAlcCoRou
         pushad
 
-        shl ecx, 2                      ; multiply by 4
+		shl ecx, 2 						; multiply by 4
         push ecx                        ; allocate array of (4*N) bytes
         call malloc
         add esp, 4
@@ -166,61 +183,70 @@ main:
 
         xor edi, edi
         xor ebx, ebx
-        mov edi, [CORS]
+		mov edi, [CORS]
 
-        allocStructsLoop:
-            pushad
-            push struct_len             ; malloc with 8 bytes
-            call malloc
-            add esp, 4          
-            mov [edi + ebx], eax        ; in the i th cell of CORS array put the new allocated address
-            popad
-            add ebx, dword 4
-        loop allocStructsLoop, ecx
-        
-        saveCoNumbers:
+		allocStructsLoop:
+			pushad
+			push struct_len 			; malloc with 8 bytes
+			call malloc
+			add esp, 4 			
+			mov [edi + ebx], eax		; in the i'th cell of CORS array put the new allocated address
+			popad
+			add ebx, dword 4
+		loop allocStructsLoop, ecx
+		
+		saveCoNumbers:
             mov esi, dword [N]
-            inc esi
             shl esi, 2
-            mov dword [schedulerCo], esi    ; save the co-routine number of scheduler
+            mov dword [schedulerCo], esi	; save the co-routine number of scheduler
             shr esi, 2
             inc esi
             shl esi, 2
-            mov dword [targetCo], esi       ; save the co-routine number of target
+            mov dword [targetCo], esi		; save the co-routine number of target
             shr esi, 2
             inc esi
             shl esi, 2
-            mov dword [printerCo], esi      ; save the co-routine number of printer
+            mov dword [printerCo], esi		; save the co-routine number of printer
 
-        xor edi, edi
-        mov ecx, dword [N]
+		xor edi, edi
+        xor esi, esi
+		mov ecx, dword [N]
         allocDroneLoop:
             pushad
-            allocateCo_routine dword drone  ; macro to create drone co-routine
+            allocateCo_routine_drone dword drone, dword esi 	; macro to create drone co-routine
+                            mov ebx, dword [CORS]
+                            
+                            mov ebx, [ebx]
+                            ;add ebx, dword SPP
+                            
+                            
+                            mov eax, dword [ebx + 8]
+
             popad
             add edi, dword 4
+            add esi, dword 1
         loop allocDroneLoop, ecx
-        
-        xor ebx, ebx
-        allocScheduler:
-            pushad
-            allocateCo_routine dword scheduler  ; macro to create scheduler co-routine
-            popad
-        add edi, dword 4
-        
-        allocTarget:
-            pushad
-            allocateCo_routine dword target     ; macro to create target co-routine
-            popad
-        add edi, dword 4
-        
-        allocPrinter:
-            pushad
-            allocateCo_routine dword printer    ; macro to create printer co-routine
-            popad
-        
+		
+		xor ebx, ebx
+		allocScheduler:
+			pushad
+			allocateCo_routine dword scheduler 	; macro to create scheduler co-routine
+			popad
+		add edi, dword 4
+		
+		allocTarget:
+			pushad
+			allocateCo_routine dword target 	; macro to create target co-routine
+			popad
+		add edi, dword 4
+		
+		allocPrinter:
+			pushad
+			allocateCo_routine dword printer 	; macro to create printer co-routine
+			popad
+		
         endAlcCoRou:
-        ret
+		ret
 
     
     initDronesArray:

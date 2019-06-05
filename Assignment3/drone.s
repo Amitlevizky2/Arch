@@ -89,19 +89,24 @@ section .text                           ; functions from c libary
      drone:
         
         finit
+                                xor esi, esi
+                                mov esi, [CORS]
+                                mov esi, [esi]
+                                mov esi, [esi +8]
         xor eax,eax
         mov eax,dword [CURR]
-        ;mov eax,dword [eax]
-        add eax,8
+        mov eax,dword [eax]
+        mov eax, [eax + 8]
         shl eax,2
         xor ebx,ebx
         mov ebx,dword [dronesArray]
-        add ebx,eax
-        fild qword [ebx]
+        ;add ebx,eax
+        mov ebx , [ebx+ eax]
+        fld qword [ebx]
         fstp qword [x1]
-        fild qword [ebx+8]
+        fld qword [ebx+8]
         fstp qword [y1]
-        fild qword [ebx+16]
+        fld qword [ebx+16]
         fstp qword [alpha]
        
 
