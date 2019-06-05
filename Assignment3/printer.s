@@ -53,23 +53,29 @@ section .text                           ; functions from c libary
     ;xor ecx, ecx
     ;print_target_details dword [yt + 4], dword [yt], dword [xt + 4], dword [xt], targetCordinatesStr
     mov eax, dword [dronesArray]
+      pushad
+      add eax, dword 4
+      mov eax, [eax]
+      popad
     mov ecx, dword [N]
-
-    fld dword [yt]
-    fld dword [xt]
+    pushad
+    fild dword [yt]
+    fild dword [xt]
     sub esp, 16
     fstp qword [esp]
     fstp qword [esp+8]
     push targetCordinatesStr
     call printf
     add esp, 20
+    popad
 
     printDronesLoop:
       mov edi, dword [eax]
+      pushad
       push dword [edi + 24]
-      fld dword [edi + 16]
-      fld dword [edi + 8]
-      fld dword [edi]
+      fild dword [edi + 16]
+      fild dword [edi + 8]
+      fild dword [edi]
       sub esp, 24
       fstp qword [esp]
       fstp qword [esp + 8]
@@ -78,6 +84,7 @@ section .text                           ; functions from c libary
       push droneDetailsStr
       call printf
       add esp, 36
+      popad
       ;print_drone_details dword [edi + 20], qword [edi + 16], qword [edi + 8], qword [edi], dword esi, droneDetailsStr
       inc esi
       add eax, dword 4
@@ -85,7 +92,9 @@ section .text                           ; functions from c libary
     loop printDronesLoop, ecx
 
     mov eax, [CORS]
-    add eax, dword [schedulerCo]
+    mov esi,dword [schedulerCo]
+    add eax, esi
+    add eax, [ebx]
     call resume
     jmp printer
 

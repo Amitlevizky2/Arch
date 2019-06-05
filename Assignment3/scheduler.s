@@ -9,6 +9,7 @@ section .text                           ; functions from c libary
    extern drone
    extern printer
    extern main
+   
    extern printerCo
    extern CORS
    extern K
@@ -27,13 +28,15 @@ section .text                           ; functions from c libary
       ;mov ebx, [eax + SPP]
       call resume
       add esi, dword 4
+      inc edi
       jmp schedulerLoop
     
     gotoPrinter:
       mov eax, [CORS]
-      add eax, [printerCo]
-      mov eax, [eax]
-      mov ebx, [eax + SPP]
+      mov ecx,dword [printerCo]
+      add eax, ecx
+      mov ebx, [eax]
+      ;mov ebx, [eax + SPP]
       call resume
       xor edi, edi
       jmp schedulerLoop

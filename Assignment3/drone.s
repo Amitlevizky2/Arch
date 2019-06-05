@@ -95,13 +95,13 @@ section .text                           ; functions from c libary
                                 mov esi, [esi +8]
         xor eax,eax
         mov eax,dword [CURR]
-        mov eax,dword [eax]
+        ;mov eax,dword [eax]
         mov eax, [eax + 8]
         shl eax,2
         xor ebx,ebx
-        mov ebx,dword [dronesArray]
-        ;add ebx,eax
-        mov ebx , [ebx+ eax]
+        mov ebx, [dronesArray]
+        
+        add ebx,eax
         fld qword [ebx]
         fstp qword [x1]
         fld qword [ebx+8]
@@ -113,7 +113,7 @@ section .text                           ; functions from c libary
 
  
      calc_gagree:
-        startFunction
+        
         generate_num deg1,deg
         fld qword [res]
         fld qword [alpha]               ; drone old degree
@@ -134,10 +134,10 @@ section .text                           ; functions from c libary
         fldpi
         fmul
         fstp qword [alpha]
-        endFunction
+        
 
      calc_dist: 
-        startFunction    
+            
         zero_q res
         zero_q x2           
         zero_q y2
@@ -149,7 +149,8 @@ section .text                           ; functions from c libary
         fmul qword [res]            ;st0 = cos(ang) * distance
         fstp qword [x2]             ; distance*cos(deg)
         fld qword [x1]
-        fadd qword [x2]
+        fld qword [x2]
+        fadd 
         fild dword [dis]
         fcomip                      ;if new distance>100
         jae checklowx
@@ -180,11 +181,11 @@ section .text                           ; functions from c libary
         checklowy:
         fild dword [zerodata]
         fcomip
-        jb calcYsin
+        jb myDestroy
         fild dword [dis]
         fadd
         fstp qword [y1]             ;new x place
-        endFunction
+        
 
 
         myDestroy:
@@ -286,7 +287,7 @@ section .text                           ; functions from c libary
             mov eax,[CORS]
             mov ecx,dword [targetCo]
             add eax,ecx
-            mov ebx,eax
+            mov ebx,[eax]
             ffree
             call resume
             endFunction
@@ -313,7 +314,7 @@ section .text                           ; functions from c libary
                     mov eax,[CORS]
                     mov esi,dword [schedulerCo]
                     add eax,esi
-                    mov ebx,eax
+                    mov ebx,[eax]
                     ffree
                     call resume
                     jmp drone
@@ -325,10 +326,10 @@ section .text                           ; functions from c libary
         
 
 section .data
-    deg equ 360
-    dis equ 100
-    deg1 equ 60
-    dis1 equ 50
+    deg : dd 360
+    dis :dd 100
+    deg1 : dd 60
+    dis1 :dd 50
     halffeg :dd 180
     rad : dq 0.0174532925199433
     pi: dq 57.2957795130823209

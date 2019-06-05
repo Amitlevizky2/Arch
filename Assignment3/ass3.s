@@ -214,14 +214,6 @@ main:
         allocDroneLoop:
             pushad
             allocateCo_routine_drone dword drone, dword esi 	; macro to create drone co-routine
-                            mov ebx, dword [CORS]
-                            
-                            mov ebx, [ebx]
-                            ;add ebx, dword SPP
-                            
-                            
-                            mov eax, dword [ebx + 8]
-
             popad
             add edi, dword 4
             add esi, dword 1
@@ -265,20 +257,23 @@ main:
         cmp ecx, dword 0
         je endDroneInit
         mov ebx, dword [dronesArray]                ; The array
-        add ebx, esi                                ; the right drone index
+        ;add ebx, esi                                ; the right drone index
         push drone_struct_len                       ; size of struct for each drone
         pushad
         call malloc
+        mov dword [ebx + esi], eax                        ; set pointer to the new allocated space
+        ;mov edi, [ebx + esi]
+
         popad
         add esp, 4
-        mov dword [ebx], eax                        ; set pointer to the new allocated space
-        
+
         initRandomDroneValues:
         xor edx, edx
         pushad
         generate_num edx, distance                  ; Get X random value
         popad
-        fld qword [res]                             ; load res to the first cell in stack
+        fld qword [res]
+        mov ebx, [ebx + esi]                             ; load res to the first cell in stack
         fstp qword [ebx + xPlace]                   ; put it at the place ebx point at
         ;print_float qword [ebx + xPlace]
 

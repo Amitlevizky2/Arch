@@ -35,8 +35,6 @@ section .text                           ; functions from c libary
    	 generate_num edx,distance
    	 fld qword [res]
    	 fstp qword [xt]
-   	 mov dword [res],0
-	 mov dword [res + 4],0
    	 generate_num edx,distance
    	 fld qword [res]
    	 fstp qword [yt]
