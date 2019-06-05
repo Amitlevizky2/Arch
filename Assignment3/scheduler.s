@@ -1,5 +1,3 @@
-
-
 section .data
   	SPP equ 4 							; offset of pointer to co-routine stack in co-routine struct 
 section .text                           ; functions from c libary
@@ -37,5 +35,3 @@ section .text                           ; functions from c libary
       call resume
       xor edi, edi
       jmp schedulerLoop
-
-
