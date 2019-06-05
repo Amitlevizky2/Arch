@@ -14,8 +14,11 @@ section .text                           ; functions from c libary
 	 global target:function
      global xt
      global yt
+	 extern res
+	 extern CORS
+	 extern schedulerCo
+	 extern resume
      extern drone
-     extern target
      extern scheduler
      extern printer
      extern random_number
@@ -32,7 +35,8 @@ section .text                           ; functions from c libary
    	 generate_num edx,distance
    	 fld qword [res]
    	 fstp qword [xt]
-   	 mov qword [res],0
+   	 mov dword [res],0
+	 mov dword [res + 4],0
    	 generate_num edx,distance
    	 fld qword [res]
    	 fstp qword [yt]
@@ -49,9 +53,9 @@ section .text                           ; functions from c libary
 
 
 
-   	 section .data
-	xt :qword 0
-	yt :qword 0
+section .data
+	xt :dq 0
+	yt :dq 0
 	distance equ 100
 
 
