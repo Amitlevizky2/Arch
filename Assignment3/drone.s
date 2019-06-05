@@ -5,7 +5,6 @@ macros:
     %endmacro
 
     %macro endFunction 0
-        popa
         mov     esp, ebp
         pop     ebp
         ret
@@ -13,7 +12,7 @@ macros:
 
     %macro printwinn 1
         pushad
-        push [%1]
+        push dword [%1]
         push printwin
         call printf
         add esp,8
@@ -33,24 +32,7 @@ macros:
         add esp,8
 %endmacro
 
-%macro in_renage 2
-    fld qword [%1]
-    fild dword [%2]
-    fcomip
-    jg %%bigger
-    fld qword [%1]
-    ftst
-    jl %%lower
-   jmp  %%endmacro_in
-    %%bigger:
-        fsub dword [%2]
-        fstp qword [%1]
-        jmp %%endmacro_in
-    %%lower:
-        fadd dword [%2]
-        fstp qword [%1]
-    %%endmacro_in:      
-%endmacro
+
 
 
 %macro zero_q 1
@@ -81,11 +63,19 @@ section .text                           ; functions from c libary
      extern beta
      extern d
      extern T
+     extern N
      extern xt
      extern yt
+     extern targetCo
      extern dronesArray
      extern random_number
      extern target
+     extern CORS
+     extern res
+     extern resume
+     extern CURR
+     extern endCo
+     extern schedulerCo
      extern scheduler
      extern printer
      extern printf 
@@ -97,6 +87,7 @@ section .text                           ; functions from c libary
  
     
      drone:
+        
         finit
         xor eax,eax
         mov eax,dword [CURR]
@@ -117,7 +108,7 @@ section .text                           ; functions from c libary
 
  
      calc_gagree:
-        
+        startFunction
         generate_num deg1,deg
         fld qword [res]
         fld qword [alpha]               ; drone old degree
@@ -129,12 +120,19 @@ section .text                           ; functions from c libary
         jl nofixdegree 
         fild qword [alpha]
         fsub dword [deg]
-        zero_q olddegree
+        ;zero_q alpha
         fstp qword [alpha]
         nofixdegree:
+        fld qword [alpha]
+        fild dword [halffeg]
+        fdiv 
+        fldpi
+        fmul
+        fstp qword [alpha]
+        endFunction
 
-
-     calc_dist:     
+     calc_dist: 
+        startFunction    
         zero_q res
         zero_q x2           
         zero_q y2
@@ -147,21 +145,41 @@ section .text                           ; functions from c libary
         fstp qword [x2]             ; distance*cos(deg)
         fld qword [x1]
         fadd qword [x2]
-        zero_q x1
+        fild dword [dis]
+        fcomip                      ;if new distance>100
+        jae checklowx
+        fild dword [dis]
+        fsub
+        checklowx:
+        fild dword [zerodata]
+        fcomip
+        jb calcYsin
+        fild dword [dis]
+        fadd
         fstp qword [x1]             ;new x place
-        in_renage x1,dis
+        calcYsin:
+
         fld qword [alpha]       ;load angle into st0
         fld qword [rad]
         fmul
         fsin                        ;st0 = cos(ang)
         fmul qword [res]            ;st0 = cos(ang) * distance
-        fstp qword [y2]             ;distance*cos(deg)
+        fstp qword [y2]             ; distance*cos(deg)
         fld qword [y1]
         fadd qword [y2]
-        zero_q y1
-        fstp qword [y1]             ;new y place
-        in_renage y1,dis
-        zero_q res 
+        fild dword [dis]
+        fcomip                      ;if new distance>100
+        jae checklowy
+        fild dword [dis]
+        fsub
+        checklowy:
+        fild dword [zerodata]
+        fcomip
+        jb calcYsin
+        fild dword [dis]
+        fadd
+        fstp qword [y1]             ;new x place
+        endFunction
 
 
         myDestroy:
@@ -177,23 +195,19 @@ section .text                           ; functions from c libary
             fstp qword [ymd]
             call calc_distance
             call calc_deg
+
             fild dword [d]
             fld qword [dis_tar_dro]
             fcomip              ; check if distance to target < d
-            fae resumeSchedular
+            jae resumeSchedular
             fld qword [beta]
             fld qword [gamma]
             fcomip
             jae resumeSchedular     ; TODO make resume scheduler
-
             call distroyTarget
+            jmp drone
 
             
-
-
-
-
-
 
 
             calc_distance:
@@ -201,9 +215,13 @@ section .text                           ; functions from c libary
                 fld qword [ymd]
                 fld qword [ymd]
                 fmul    
+                fstp qword [ymd]
                 fld qword [xmd]
                 fld qword [xmd]
                 fmul
+                fstp qword [xmd]
+                fld qword [ymd]
+                fld qword [xmd]
                 fadd
                 fsqrt
                 fstp qword [dis_tar_dro]
@@ -213,24 +231,40 @@ section .text                           ; functions from c libary
 
             calc_deg:
                 startFunction
+                ffree
                 fld qword [ymd]
                 fld  qword [xmd]
                 fpatan
                 fstp qword [gamma]
-                fld qword [alpha]
-                fsub qword [gamma]
-
-                fld qword [qamma]
+                fld qword [gamma]
                 fld qword [pi]
                 fmul
                 fstp qword [gamma]
+                fld qword [gamma]
+                fld qword [alpha]
+                fsub 
+                fabs
+                fstp qword [gamma]
+                fldpi
+                fld qword [gamma]
+                fcomip
+                ja add2pi
+                ffree
                 pop ebp
                 ret
+                add2pi:
+                fldpi
+                fadd
+                fldpi
+                fadd
+                fld qword [gamma]
+                endFunction
                 
 
             
         distroyTarget:
             startFunction
+            ffree
             xor eax,eax
             mov eax,dword [CURR]
             ;mov eax,dword [eax]
@@ -243,28 +277,41 @@ section .text                           ; functions from c libary
             mov esi,[T]
             cmp esi, dword [ebx+24]
             je printwinner
-            jmp resumetarger    ;TODO make resume target
+
+            mov eax,[CORS]
+            mov ecx,dword [targetCo]
+            add eax,ecx
+            mov ebx,eax
+            ffree
+            call resume
+            endFunction
+            
+
 
 
 
 
             printwinner:
-                xor ecx,ecx
-                mov ecx,dword [eax]
                 printwinn eax
-                ffree
-
-
-
-
-          
-
+                ffree           ;TODO stop the game exit to main
+                call endCo
 
 
 
 
 
 
+                resumeSchedular:
+                    xor ebx,ebx
+                    xor eax,eax
+                    xor esi,esi
+                    mov eax,[CORS]
+                    mov esi,dword [schedulerCo]
+                    add eax,esi
+                    mov ebx,eax
+                    ffree
+                    call resume
+                    endFunction
 
 
 
@@ -278,22 +325,23 @@ section .data
     deg1 equ 60
     dis1 equ 50
     halffeg :dd 180
-    rad : oword 0.0174532925199433
-    pi: oword 57.2957795130823209
+    rad : dq 0.0174532925199433
+    pi: dq 57.2957795130823209
     degree: dd 0
+    zerodata: dd 0
     olddegree: dd 0
     dronearr : dd 0
     distance: dd 0
     olddistance: dd 0
     x2: dd 0            ;delta x cordinate     
     y2: dd 0            ;first y cordinate
-    x1: qword 0
-    x2: qword 0
-    xmd: qword 0 
-    ymd: qword 0
-    dis_tar_dro: tword 0
-    numofhit: qword 0
-    alpha: qword 0
+    x1: dq 0
+    y1: dq 0
+    xmd: dq 0 
+    ymd: dq 0
+    dis_tar_dro: dq 0
+    numofhit: dq 0
+    alpha: dq 0
     gamma: dd 0
     maxint : DD 0xffff
     format_string_2f: db "%.2f",10,0 ; float 2 numbers after dot
