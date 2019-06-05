@@ -24,34 +24,17 @@
 %endmacro
 
 %macro allocateCo_routine 1
-	push STKSZ
-	call malloc                     ; Allocate stack size
-	add esp, 4
-	mov ebx, dword [CORS]
-	add ebx, edi
-	mov ebx, [ebx]
-	;add ebx, dword SPP
-    mov dword [ebx + 12], eax
-	add eax, STKSZ 					; set in eax the address of the end of the stack
-	mov esi, dword %1
-	mov [ebx], %1
+    push STKSZ
+    call malloc                     ; Allocate stack size
+    add esp, 4
+    mov ebx, dword [CORS]
+    add ebx, edi
+    mov ebx, [ebx]
+    ;add ebx, dword SPP
+    add eax, STKSZ                  ; set in eax the address of the end of the stack
+    mov esi, dword %1
+    mov [ebx], %1
     mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
-%endmacro
-
-%macro allocateCo_routine_drone 2
-	push STKSZ
-	call malloc                     ; Allocate stack size
-	add esp, 4
-	mov ebx, dword [CORS]
-	add ebx, edi
-	mov ebx, [ebx]
-	;add ebx, dword SPP
-    mov dword [ebx + 12], eax
-	add eax, STKSZ 					; set in eax the address of the end of the stack
-	mov esi, dword %1
-	mov [ebx], %1
-    mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
-    mov dword [ebx + 8], %2
 %endmacro
 
 %macro callscanf 3
@@ -95,22 +78,7 @@
         add esp,8
 %endmacro
 
-section .data
-    format_string_s : db "%s",0 
-    format_string : db "%d",10,0 
-    down :db '',10,0
-    format_string_int: db "%d", 10, 0   ; format string int
-    format_string_float: db "%f", 10, 0 ; format string float
-    format_string_floatl: db "%lf", 10, 0 ; format string float
-    format_string_2f: db "%.2f",10,0 ; float 2 numbers after dot
-    degree equ 360
-    distance equ 100
-    maxint: dd 0xffff
-    bignum: DD 0
-    res : dd 0
-	struct_len equ 16
-    drone_struct_len equ 28
-	SPP equ 4 							; offset of pointer to co-routine stack in co-routine struct 
+                         ; offset of pointer to co-routine stack in co-routine struct 
 
 
 
@@ -119,6 +87,7 @@ section .text                           ; functions from c libary
      global main 
      global random_number
      global N
+     global res
      global T
      global K
      global seed
@@ -127,16 +96,18 @@ section .text                           ; functions from c libary
      global AlcCoRoutins
      global preInitCoLoop
      global startCo
+     global endCo
+     global CURR
      global CORS
      global dronesArray
      global schedulerCo
      global targetCo
      global printerCo
      global resume
-	 extern drone
-	 extern target
-	 extern scheduler
-	 extern printer
+     extern drone
+     extern target
+     extern scheduler
+     extern printer
      extern printf 
      extern fprintf
      extern sscanf
@@ -168,11 +139,11 @@ main:
         pushad
         callscanf seed, format_string_int, dword [eax + 24] ; Seed for initialization of LFSR shift register
         popad
-	call AlcCoRoutins
+    call AlcCoRoutins
     call initDronesArray
-	call preInitCoLoop
-	call startCo
-	jmp endAss3
+    call preInitCoLoop
+    call startCo
+    jmp endAss3
 
             
      
@@ -186,7 +157,7 @@ main:
         je endAlcCoRou
         pushad
 
-		shl ecx, 2 						; multiply by 4
+        shl ecx, 2                      ; multiply by 4
         push ecx                        ; allocate array of (4*N) bytes
         call malloc
         add esp, 4
@@ -195,65 +166,63 @@ main:
 
         xor edi, edi
         xor ebx, ebx
-		mov edi, [CORS]
+        mov edi, [CORS]
 
-		allocStructsLoop:
-			pushad
-			push struct_len 			; malloc with 8 bytes
-			call malloc
-			add esp, 4 			
-			mov [edi + ebx], eax		; in the i'th cell of CORS array put the new allocated address
-			popad
-			add ebx, dword 4
-		loop allocStructsLoop, ecx
-		
-		saveCoNumbers:
+        allocStructsLoop:
+            pushad
+            push struct_len             ; malloc with 8 bytes
+            call malloc
+            add esp, 4          
+            mov [edi + ebx], eax        ; in the i th cell of CORS array put the new allocated address
+            popad
+            add ebx, dword 4
+        loop allocStructsLoop, ecx
+        
+        saveCoNumbers:
             mov esi, dword [N]
             inc esi
             shl esi, 2
-            mov dword [schedulerCo], esi	; save the co-routine number of scheduler
+            mov dword [schedulerCo], esi    ; save the co-routine number of scheduler
             shr esi, 2
             inc esi
             shl esi, 2
-            mov dword [targetCo], esi		; save the co-routine number of target
+            mov dword [targetCo], esi       ; save the co-routine number of target
             shr esi, 2
             inc esi
             shl esi, 2
-            mov dword [printerCo], esi		; save the co-routine number of printer
+            mov dword [printerCo], esi      ; save the co-routine number of printer
 
-		xor edi, edi
-        xor esi, esi
-		mov ecx, dword [N]
+        xor edi, edi
+        mov ecx, dword [N]
         allocDroneLoop:
             pushad
-            allocateCo_routine_drone dword drone, dword esi 	; macro to create drone co-routine
+            allocateCo_routine dword drone  ; macro to create drone co-routine
             popad
             add edi, dword 4
-            add esi, dword 1
         loop allocDroneLoop, ecx
-		
-		xor ebx, ebx
-		allocScheduler:
-			pushad
-			allocateCo_routine dword scheduler 	; macro to create scheduler co-routine
-			popad
-		add edi, dword 4
-		
-		allocTarget:
-			pushad
-			allocateCo_routine dword target 	; macro to create target co-routine
-			popad
-		add edi, dword 4
-		
-		allocPrinter:
-			pushad
-			allocateCo_routine dword printer 	; macro to create printer co-routine
-			popad
-		
+        
+        xor ebx, ebx
+        allocScheduler:
+            pushad
+            allocateCo_routine dword scheduler  ; macro to create scheduler co-routine
+            popad
+        add edi, dword 4
+        
+        allocTarget:
+            pushad
+            allocateCo_routine dword target     ; macro to create target co-routine
+            popad
+        add edi, dword 4
+        
+        allocPrinter:
+            pushad
+            allocateCo_routine dword printer    ; macro to create printer co-routine
+            popad
+        
         endAlcCoRou:
-		ret
+        ret
 
-	
+    
     initDronesArray:
         preInitDrone:
         mov ecx, dword [N]                          ; Number of drones
@@ -313,37 +282,37 @@ main:
         
 
     preInitCoLoop:
-	xor ecx, ecx
-	xor edi, edi
-	mov ecx, dword [N]
-	add ecx, dword 3
-		
-	initCoLoop:
-		pushad
-		push edi
-		call initCo 			; for every co-routine performe a initialization
-		add esp, 4
-		popad
-		inc edi
-	loop initCoLoop, ecx
-	ret
+    xor ecx, ecx
+    xor edi, edi
+    mov ecx, dword [N]
+    add ecx, dword 3
+        
+    initCoLoop:
+        pushad
+        push edi
+        call initCo             ; for every co-routine performe a initialization
+        add esp, 4
+        popad
+        inc edi
+    loop initCoLoop, ecx
+    ret
 
     mov ebx,50
     generate_num ebx ,distance
     ;print_float
     mov edx ,0
-	;generate_num  degree
+    ;generate_num  degree
     ;print_float
     jmp endAss3
     
     ;----------initCo Function---------;
     initCo:
         startFunction               ; get co-routine ID number
-		mov edx, dword[CORS]
+        mov edx, dword[CORS]
         mov ebx, [4*ebx + edx]      ; get pointer to COi struct
         mov eax, [ebx+CODEP]        ; get initial EIP value – pointer to COi function
         mov [SPT], esp              ; save ESP value
-		mov esi, dword [ebx + SPP]
+        mov esi, dword [ebx + SPP]
         mov esp, [ebx+SPP]          ; get initial ESP value – pointer to COi stack
         push eax                    ; push initial “return” address
         pushfd                      ; push flags
@@ -353,37 +322,37 @@ main:
         endFunction
     ;----------end initCo Function---------;
     
-	;----------initCo Function---------;
+    ;----------initCo Function---------;
     startCo:
-		pushad 							; save registers of main ()
-		mov [SPMAIN], esp 				; save ESP of main ()
-		mov ebx, dword [CORS] 			; gets ID of a scheduler co-routine
-		add ebx, dword [schedulerCo] 	; gets a pointer to a scheduler struct
-				;sub ebx, dword 4
-				mov esi, [ebx]
-				mov esi, [esi]
-				mov ebx, [ebx]
-		jmp do_resume 					; resume a scheduler co-routine
+        pushad                          ; save registers of main ()
+        mov [SPMAIN], esp               ; save ESP of main ()
+        mov ebx, dword [CORS]           ; gets ID of a scheduler co-routine
+        add ebx, dword [schedulerCo]    ; gets a pointer to a scheduler struct
+                ;sub ebx, dword 4
+                mov esi, [ebx]
+                mov esi, [esi]
+                mov ebx, [ebx]
+        jmp do_resume                   ; resume a scheduler co-routine
 
-	endCo:
-		mov esp, [SPMAIN] 				; restore ESP of main()
-		popad							; restore registers of main()
-		ret
+    endCo:
+        mov esp, [SPMAIN]               ; restore ESP of main()
+        popad                           ; restore registers of main()
+        ret
 
-	resume:  							; save state of current co-routine
-		pushfd
-		pushad
-		mov edx, [CURR]
-		mov [edx+SPP], esp 				; save current ESP
+    resume:                             ; save state of current co-routine
+        pushfd
+        pushad
+        mov edx, [CURR]
+        mov [edx+SPP], esp              ; save current ESP
     
-	do_resume: 							; load ESP for resumed co-routine
-		mov esp, [ebx + SPP]
-		mov [CURR], ebx
-		popad
-		popfd
-		ret
-	
-	;----------random_number Function---------;
+    do_resume:                          ; load ESP for resumed co-routine
+        mov esp, [ebx + SPP]
+        mov [CURR], ebx
+        popad
+        popfd
+        ret
+    
+    ;----------random_number Function---------;
      random_number:
         push    ebp
         mov     ebp, esp
@@ -430,68 +399,30 @@ main:
         fadd
         fstp qword [res]
     endFunction
-	;----------end random_number Function---------;
+    ;----------end random_number Function---------;
     
-
-freeMemoryBeforeExit:
-    xor ecx, ecx
-    xor esi, esi
-    mov ecx, [N]
-    add ecx, dword 3
-    mov eax, dword [CORS]
-
-    freeStackLoop:
-        mov ebx, dword [eax]
-        mov ebx, dword [ebx +12]
-        pushad
-        push ebx
-        call free
-        add esp, 4
-        popad
-        add eax, dword 4
-    loop freeStackLoop, ecx
-
-    xor ecx, ecx
-    mov ecx, [N]
-    add ecx, dword 3
-    mov eax, dword [CORS]
-
-    freeStructLoop:
-        mov ebx, dword [eax]
-        pushad
-        push ebx
-        call free
-        add esp, 4
-        popad
-        add eax, dword 4
-    loop freeStructLoop, ecx
-
-    xor ecx, ecx
-    mov ecx, [N]
-    mov eax, dword [dronesArray]
-
-    freeDronesArrayLoop:
-        pushad
-        push eax
-        call free
-        add esp, 4
-        popad
-        add eax, 4
-    loop freeDronesArrayLoop, ecx
+    freeMemoryBeforeExit:
 
 
-    mov eax, [CORS]
-    push eax
-    call free
-    add esp, 4
-
-    mov eax, [dronesArray]
-    push eax
-    call free
-    add esp, 4
-    jmp endAss3
 endAss3:
 
+
+section .data
+    format_string_s : db "%s",0 
+    format_string : db "%d",10,0 
+    down :db '',10,0
+    format_string_int: db "%d", 10, 0   ; format string int
+    format_string_float: db "%f", 10, 0 ; format string float
+    format_string_floatl: db "%lf", 10, 0 ; format string float
+    format_string_2f: db "%.2f",10,0 ; float 2 numbers after dot
+    degree equ 360
+    distance equ 100
+    maxint: dd 0xffff
+    bignum: DD 0
+    res : dd 0
+    struct_len equ 8
+    drone_struct_len equ 28
+    SPP equ 4  
 
 section .bss
     N : resd 1                          ; Number of drones
@@ -502,9 +433,9 @@ section .bss
     seed : resd 1                       ; Seed for initialization of LFSR shift register
     CORS : resd 1                       ; Number of all the co-routines in the program
     dronesArray : resd 1                ; Array to keep each drone details
-	schedulerCo : resd 1 				; Pointer to scheduler co-routine
-	targetCo : resd 1 					; Pointer to target co-routine
-	printerCo : resd 1					; Pointer to printer co-routine
+    schedulerCo : resd 1                ; Pointer to scheduler co-routine
+    targetCo : resd 1                   ; Pointer to target co-routine
+    printerCo : resd 1                  ; Pointer to printer co-routine
     xValue : resq 1
     yValue : resq 1
     alphValue : resq 1
@@ -517,8 +448,8 @@ section .bss
 
     ;------------Co-routines fields------------;
     CURR: resd 1
-    SPT: resd 1 						; temporary stack pointer
-    SPMAIN: resd 1						; stack pointer of main
-    STKSZ equ 16*1024					; co-routine stack size
-    CODEP equ 0 						; offset of pointer to co-routine function in co-routine struct 
+    SPT: resd 1                         ; temporary stack pointer
+    SPMAIN: resd 1                      ; stack pointer of main
+    STKSZ equ 16*1024                   ; co-routine stack size
+    CODEP equ 0                         ; offset of pointer to co-routine function in co-routine struct 
     
