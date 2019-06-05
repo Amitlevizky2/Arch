@@ -293,7 +293,7 @@ section .text                           ; functions from c libary
 
             printwinner:
                 printwinn eax
-                ffree           ;TODO stop the game exit to main
+                ffree   
                 call endCo
 
 
@@ -311,7 +311,7 @@ section .text                           ; functions from c libary
                     mov ebx,eax
                     ffree
                     call resume
-                    endFunction
+                    jmp drone
 
 
 

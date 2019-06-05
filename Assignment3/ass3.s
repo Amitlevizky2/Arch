@@ -143,7 +143,7 @@ main:
     call initDronesArray
     call preInitCoLoop
     call startCo
-    jmp endAss3
+    jmp freeMemoryBeforeExit
 
             
      
@@ -402,8 +402,62 @@ main:
     ;----------end random_number Function---------;
     
     freeMemoryBeforeExit:
+    xor ecx, ecx
+    xor esi, esi
+    mov ecx, [N]
+    add ecx, dword 3
+    mov eax, dword [CORS]
+
+    freeStackLoop:
+        mov ebx, dword [eax]
+        mov ebx, dword [ebx +12]
+        pushad
+        push ebx
+        call free
+        add esp, 4
+        popad
+        add eax, dword 4
+    loop freeStackLoop, ecx
+
+    xor ecx, ecx
+    mov ecx, [N]
+    add ecx, dword 3
+    mov eax, dword [CORS]
+
+    freeStructLoop:
+        mov ebx, dword [eax]
+        pushad
+        push ebx
+        call free
+        add esp, 4
+        popad
+        add eax, dword 4
+    loop freeStructLoop, ecx
+
+    xor ecx, ecx
+    mov ecx, [N]
+    mov eax, dword [dronesArray]
+
+    freeDronesArrayLoop:
+        pushad
+        push eax
+        call free
+        add esp, 4
+        popad
+        add eax, 4
+    loop freeDronesArrayLoop, ecx
 
 
+    mov eax, [CORS]
+    push eax
+    call free
+    add esp, 4
+
+    mov eax, [dronesArray]
+    push eax
+    call free
+    add esp, 4
+    jmp endAss3
 endAss3:
 
 

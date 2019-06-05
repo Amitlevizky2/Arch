@@ -48,6 +48,7 @@ section .text                           ; functions from c libary
    	 add eax,esi
    	 mov ebx,eax
    	 call resume
+	jmp target
      
 
 
