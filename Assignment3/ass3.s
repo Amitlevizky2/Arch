@@ -202,12 +202,16 @@ main:
 		mov edi, [CORS]
 
 		allocStructsLoop:
-			pushad
+			push ebx
+            push edi
+            push ecx
 			push struct_len 			; malloc with 8 bytes
 			call malloc
-			add esp, 4 			
+			add esp, 4 	
+            pop ecx
+            pop edi
+            pop ebx		
 			mov [edi + ebx], eax		; in the i'th cell of CORS array put the new allocated address
-			popad
 			add ebx, dword 4
 		loop allocStructsLoop, ecx
 		
@@ -229,7 +233,20 @@ main:
 		mov ecx, dword [N]
         allocDroneLoop:
             pushad
-            allocateCo_routine_drone dword drone, dword esi 	; macro to create drone co-routine
+            ; allocateCo_routine_drone dword drone, dword esi 	; macro to create drone co-routine
+            push STKSZ
+            call malloc                     ; Allocate stack size
+            add esp, 4
+            mov ebx, dword [CORS]
+            add ebx, edi
+            mov ebx, [ebx]
+            ;add ebx, dword SPP
+            eax_bef:
+            mov dword [ebx + 12], eax
+            add eax, STKSZ 					; set in eax the address of the end of the stack
+            mov [ebx],dword drone
+            mov dword [ebx + 4], eax        ; Set  cell in Cors array to point to  alocated stack
+            mov dword [ebx + 8], dword esi
             popad
             add edi, dword 4
             add esi, dword 1
@@ -454,22 +471,34 @@ main:
     endFunction
     ;----------end random_number Function---------;
     
-    freeMemoryBeforeExit:
+freeMemoryBeforeExit:
     xor ecx, ecx
     xor esi, esi
-    xor eax, eax
+    xor eax, eax        ; counter
     mov ecx, [N]
     add ecx, dword 3
     mov ebx, dword [CORS]
 
-    freeStackLoop:
-        mov ebx, dword [ebx + eax]
-        mov ebx, [ebx + 12]
+    xor ecx, ecx
+
+freeStackLoop:
+        mov eax, [N]
+        add eax, dword 3
+        cmp ecx, eax
+        je fin_freeStack
+        mov eax, dword[CORS]
+        mov eax, [eax +4*ecx]
+        mov eax, [eax + 12]
+        eax_after:
         pushad
-        freeValues ebx
+        push eax
+        call free
+        bb:
+        add esp, 4
         popad
-        add eax, dword 4
-    loop freeStackLoop, ecx
+        add ecx, byte 1
+        jmp freeStackLoop
+   fin_freeStack:
 
     xor ecx, ecx
     xor esi, esi
@@ -482,6 +511,7 @@ main:
         pushad
         push ebx
         call free
+        add esp, 4
         popad
         add eax, dword 4
     loop freeStructLoop, ecx
@@ -490,14 +520,21 @@ main:
     mov ecx, [N]
     mov eax, dword [dronesArray]
 
+    xor eax,eax
+    xor ecx, ecx
     freeDronesArrayLoop:
-        pushad
+        cmp ecx, [N]
+        je finish_it
+        push ecx
+        mov eax, [dronesArray]
+        mov eax, [eax + ecx * 4]
         push eax
         call free
         add esp, 4
-        popad
-        add eax, 4
-    loop freeDronesArrayLoop, ecx
+        pop ecx
+        inc ecx
+        jmp freeDronesArrayLoop
+    finish_it:
 
 
     mov eax, [CORS]
@@ -509,7 +546,8 @@ main:
     push eax
     call free
     add esp, 4
-    jmp endAss3
+    ; jmp endAss3
+    ret
 endAss3:
 
 
@@ -526,7 +564,7 @@ section .data
     maxint: dd 65536
     bignum: DD 0
     res : dd 0
-    struct_len equ 8
+    struct_len equ 16
     drone_struct_len equ 28
     SPP equ 4  
 
