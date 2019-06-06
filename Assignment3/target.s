@@ -42,23 +42,23 @@ section .text                           ; functions from c libary
      target:
      finit
    	 xor edx,edx
+        
    	 generate_num edx,distance
+        
    	 fld qword [res]
    	 fstp qword [xt]
-	print_float xt
-   	 generate_num edx,distance
+   	 generate_num edx,distance  
    	 fld qword [res]
    	 fstp qword [yt]
-	print_float yt
    	 xor ebx,ebx
    	 xor eax,eax
    	 xor esi,esi
    	 mov eax,[CORS]
    	 mov esi,dword [schedulerCo]
    	 add eax,esi
-   	 mov ebx,eax
+   	 mov ebx, [eax]
    	 call resume
-	jmp target
+	 jmp target
      
 
 
@@ -67,7 +67,7 @@ section .text                           ; functions from c libary
 section .data
 	xt :dq 0
 	yt :dq 0
-	distance :dd 100
+	distance :equ 100
 	format_string_2f: db "%.2f",10,0 ; float 2 numbers after dot
    
 

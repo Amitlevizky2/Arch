@@ -12,7 +12,7 @@ macros:
 
     %macro printwinn 1
         pushad
-        push dword [%1]
+        push %1
         push printwin
         call printf
         add esp,8
@@ -50,14 +50,14 @@ macros:
     add esp,12
     %endmacro
 
-    %macro print_d 1
+%macro print_d 1
     pushad
     push %1
     push format_string
     call printf
     add esp,8
     popad
-    %endmacro
+%endmacro
 
 
 
@@ -93,6 +93,7 @@ section .text                           ; functions from c libary
      extern sscanf
      extern malloc
      extern free
+     extern maxint
 
  
     
@@ -124,14 +125,13 @@ section .text                           ; functions from c libary
      calc_gagree:
         
         pushad
-        generate_num deg1,deg
+        generate_num deg2,deg1
         popad
         ;print_float res
         fld qword [res]
         fld qword [alpha]               ; drone old degree
+        
         faddp
-        ;fstp qword [alpha]
-        ;print_float alpha
         fild dword [max_deg]   
         fcomip
         jae nofixdegree 
@@ -153,7 +153,7 @@ section .text                           ; functions from c libary
         zero_q x2           
         zero_q y2
         pushad
-        generate_num dis1,dis
+        generate_num zero,dis1
         popad
         fld qword [alpha]       ;load angle into st0
         fld qword [rad]
@@ -179,10 +179,8 @@ section .text                           ; functions from c libary
                    
         calcYsin:
         fstp qword [x1] 
-          fld qword [x1]
-         fstp qword [ebx]
-
-
+        fld qword [x1]
+        fstp qword [ebx]
         fld qword [alpha]       ;load angle into st0
         fld qword [rad]
         fmul
@@ -203,14 +201,19 @@ section .text                           ; functions from c libary
         jb myDestroy
         fild dword [max_dis]
         fadd
+
+
+        mov eax,dword [CURR]
+        mov eax, [eax + 8]
         myDestroy: 
         fstp qword [y1]             ;new y place
          fld qword [y1]
          fstp qword [ebx+8]
-
-
-        
-
+            fld dword [d]
+            fstp qword [distance_input]
+            ;print_float distance_input
+            fld dword [beta]
+            fstp qword [beta_input]
             fld qword [xt]
             fld qword [x1]
             fsub 
@@ -219,15 +222,21 @@ section .text                           ; functions from c libary
             fld qword [y1]
             fsub 
             fstp qword [ymd]
+            call calc_deg 
             call calc_distance
-            call calc_deg
+        
+          
+           
 
-            fild dword [d]
+            fld qword [distance_input]
             fld qword [dis_tar_dro]
             fcomip              ; check if distance to target < d
             jae resumeSchedular
-            fld qword [beta]
+            fld qword [beta_input]
             fld qword [gamma]
+            
+            
+
             fcomip
             jae resumeSchedular     ; TODO make resume scheduler
             call distroyTarget
@@ -266,25 +275,40 @@ section .text                           ; functions from c libary
                 fld qword [pi]
                 fmul
                 fstp qword [gamma]
-                fld qword [gamma]
                 fld qword [alpha]
+                fld qword [gamma]
+                fsub 
+                fild dword [halffeg]
+                fcomip
+                jb add2pi
+                cont_calc_deg:
+                fld qword [alpha]
+                fld qword [gamma]
                 fsub 
                 fabs
                 fstp qword [gamma]
-                fldpi
-                fld qword [gamma]
+                endFunction
                 fcomip
                 ja add2pi
                 ffree
                 pop ebp
                 ret
                 add2pi:
-                fldpi
-                fadd
-                fldpi
-                fadd
+                fld qword [alpha]
                 fld qword [gamma]
-                endFunction
+                fcomip
+                jb fixsmaller
+                 fild dword [max_deg]
+                fld qword [alpha]
+                fadd
+                fstp qword [alpha]
+                jmp cont_calc_deg
+                fixsmaller:
+                fild dword [max_deg]
+                fld qword [gamma]
+                fadd
+                fstp qword [gamma]
+                jmp cont_calc_deg
                 
 
             
@@ -293,13 +317,17 @@ section .text                           ; functions from c libary
             ffree
             xor eax,eax
             mov eax,dword [CURR]
-            ;mov eax,dword [eax]
-            add eax,8
+            mov eax, [eax + 8]
             shl eax,2
             xor ebx,ebx
             mov ebx,dword [dronesArray]
-            add ebx,eax
-            add dword [ebx+24],1
+            mov ebx, [ebx + eax]
+
+            xor esi, esi
+            mov esi, [ebx + 24]
+            inc esi
+
+            mov dword [ebx+24],esi
             mov esi,[T]
             cmp esi, dword [ebx+24]
             je printwinner
@@ -318,6 +346,8 @@ section .text                           ; functions from c libary
 
 
             printwinner:
+                shr eax, 2
+                inc eax
                 printwinn eax
                 ffree   
                 call endCo
@@ -349,29 +379,31 @@ section .data
     deg: equ 360
     dis :equ 100
     deg1 :equ  60
+    deg2: equ -60
     dis1 :equ 50
+    zero:equ 0
     halffeg :dd 180
     max_dis : dd 100
     max_deg : dd 360
+    beta_input: dq 0
+    distance_input:dq 0
     rad : dq 0.0174532925199433
     pi: dq 57.2957795130823209
     degree: dd 0
     zerodata: dd 0
-    olddegree: dd 0
-    dronearr : dd 0
-    distance: dd 0
-    olddistance: dd 0
-    x2: dd 0            ;delta x cordinate     
-    y2: dd 0            ;first y cordinate
+  
+
+    x2: dq 0            ;delta x cordinate     
+    y2: dq 0            ;first y cordinate
+
     x1: dq 0
     y1: dq 0
     xmd: dq 0 
     ymd: dq 0
     dis_tar_dro: dq 0
-    numofhit: dq 0
     alpha: dq 0
-    gamma: dd 0
-    maxint : DD 0xffff
+    gamma: dq 0
+    ;maxint : DD 0xffff
     format_string_2f: db "%.2f",10,0 ; float 2 numbers after dot
     format_string : db "%d",10,0 
     printwin: db "Drone id %d: I am a winner",10,0

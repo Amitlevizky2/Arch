@@ -80,7 +80,9 @@ section .text                           ; functions from c libary
       fstp qword [esp]
       fstp qword [esp + 8]
       fstp qword [esp + 16]
+      inc esi
       push esi
+      dec esi
       push droneDetailsStr
       call printf
       add esp, 36

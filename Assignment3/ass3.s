@@ -5,6 +5,12 @@
     add esp, 8
 %endmacro
 
+%macro freeValues 1
+    push %1
+    call free
+    add esp, 4
+%endmacro
+
 %macro print_float 1
     pushad
     fld qword %1
@@ -87,7 +93,7 @@
     mov dword [%1+4],0
 %endmacro
 
-%macro generate_num 2
+%macro  generate_num 2
         push %1
         push %2
         call random_number
@@ -121,6 +127,7 @@ section .text                           ; functions from c libary
      global targetCo
      global printerCo
      global resume
+     global maxint
      extern xt
      extern yt
      extern drone
@@ -149,6 +156,12 @@ main:
 
         pushad
         callscanf beta, format_string_float, dword [eax + 16]  ; Angle of drone field-of-view
+        ; fld dword [beta]
+        ; sub esp, 8
+        ; fstp qword [esp]
+        ; push format_string_2f
+        ; call printf
+        ; add esp, 12
         popad
 
         pushad
@@ -337,12 +350,12 @@ main:
     loop initCoLoop, ecx
     ret
 
-    mov ebx,50
-    generate_num ebx ,distance
-    ;print_float
-    mov edx ,0
-    ;generate_num  degree
-    ;print_float
+    ; mov ebx,50
+    ; generate_num ebx ,distance
+    ; ;print_float
+    ; mov edx ,0
+    ; ;generate_num  degree
+    ; ;print_float
     jmp endAss3
     
     ;----------initCo Function---------;
@@ -444,22 +457,22 @@ main:
     freeMemoryBeforeExit:
     xor ecx, ecx
     xor esi, esi
+    xor eax, eax
     mov ecx, [N]
     add ecx, dword 3
-    mov eax, dword [CORS]
+    mov ebx, dword [CORS]
 
     freeStackLoop:
-        mov ebx, dword [eax]
-        mov ebx, dword [ebx +12]
+        mov ebx, dword [ebx + eax]
+        mov ebx, [ebx + 12]
         pushad
-        push ebx
-        call free
-        add esp, 4
+        freeValues ebx
         popad
         add eax, dword 4
     loop freeStackLoop, ecx
 
     xor ecx, ecx
+    xor esi, esi
     mov ecx, [N]
     add ecx, dword 3
     mov eax, dword [CORS]
@@ -469,7 +482,6 @@ main:
         pushad
         push ebx
         call free
-        add esp, 4
         popad
         add eax, dword 4
     loop freeStructLoop, ecx
@@ -507,11 +519,11 @@ section .data
     down :db '',10,0
     format_string_int: db "%d", 10, 0   ; format string int
     format_string_float: db "%f", 10, 0 ; format string float
-    format_string_floatl: db "%lf", 10, 0 ; format string float
+    format_string_floatl: db "%1f", 10, 0 ; format string float
     format_string_2f: db "%.2f",10,0 ; float 2 numbers after dot
     degree equ 360
     distance equ 100
-    maxint: dd 0xffff
+    maxint: dd 65536
     bignum: DD 0
     res : dd 0
     struct_len equ 8
