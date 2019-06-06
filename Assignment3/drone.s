@@ -41,14 +41,24 @@ macros:
 %endmacro
 
 
-%macro print_float 0
-    fld qword [res]
+%macro print_float 1
+    fld qword [%1]
     sub esp,8
     fstp qword [esp]
     push format_string_2f
     call printf
     add esp,12
     %endmacro
+
+    %macro print_d 1
+    pushad
+    push %1
+    push format_string
+    call printf
+    add esp,8
+    popad
+    %endmacro
+
 
 
 
@@ -97,48 +107,54 @@ section .text                           ; functions from c libary
         xor ebx,ebx
         mov ebx, [dronesArray]
         
-        add ebx,eax
+        ;add ebx,eax
+        mov ebx, [ebx + eax]
         fld qword [ebx]
         fstp qword [x1]
+        ;print_float x1
         fld qword [ebx+8]
         fstp qword [y1]
         fld qword [ebx+16]
         fstp qword [alpha]
+        ;print_float alpha
        
 
 
  
      calc_gagree:
         
+        pushad
         generate_num deg1,deg
+        popad
+        ;print_float res
         fld qword [res]
         fld qword [alpha]               ; drone old degree
-        fadd
-        fstp qword [alpha]
-        fld qword [alpha]
-        fild dword [deg]    
+        faddp
+        ;fstp qword [alpha]
+        ;print_float alpha
+        fild dword [max_deg]   
         fcomip
-        jl nofixdegree 
-        fild qword [alpha]
-        fsub dword [deg]
-        ;zero_q alpha
-        fstp qword [alpha]
+        jae nofixdegree 
+        fild dword [max_deg]
+        fsub 
+        jmp calc_dist
         nofixdegree:
-        fld qword [alpha]
-        fild dword [halffeg]
-        fdiv 
-        fldpi
-        fmul
-        fstp qword [alpha]
-    
-        
+        fild dword [zerodata]
+        fcomip 
+        jb calc_dist
+        fild dword [max_deg]
+        fadd 
 
-     calc_dist: 
-            
+        calc_dist:
+        fstp qword [alpha]
+        fld qword [alpha]
+        fstp qword [ebx+16] 
         zero_q res
         zero_q x2           
         zero_q y2
+        pushad
         generate_num dis1,dis
+        popad
         fld qword [alpha]       ;load angle into st0
         fld qword [rad]
         fmul
@@ -147,33 +163,25 @@ section .text                           ; functions from c libary
         fstp qword [x2]             ; distance*cos(deg)
         fld qword [x1]
         fld qword [x2]
-        fadd 
-        fild dword [dis]
+        faddp 
+        fild dword [max_dis]
         fcomip                      ;if new distance>100
         jae checklowx
-        fild dword [dis]
+        fild dword [max_dis]
         fsub
         jmp calcYsin
         checklowx:
-        fld dword [zerodata]
+        fild dword [zerodata]
         fcomip
         jb calcYsin
-        fld dword [dis]
+        fild dword [max_dis]
         fadd
-        fstp qword [x1]             ;new x place
-
-        ; xor eax,eax
-        ; mov eax,dword [CURR]
-        ; mov eax, [eax + 8]
-        ; shl eax,2
-        ; xor ebx,ebx
-        ; mov ebx, [dronesArray]
-        ; add ebx,eax
-        ; fld qword [x1]
-        ; fstp qword [ebx]
-
-
+                   
         calcYsin:
+        fstp qword [x1] 
+          fld qword [x1]
+         fstp qword [ebx]
+
 
         fld qword [alpha]       ;load angle into st0
         fld qword [rad]
@@ -183,35 +191,26 @@ section .text                           ; functions from c libary
         fstp qword [y2]             ; distance*cos(deg)
         fld qword [y1]
         fld qword [y2]
-        fadd
-        fld dword [dis]
+        faddp
+        fild dword [max_dis]
         fcomip                      ;if new distance>100
         jae checklowy
-        fild dword [dis]
+        fild dword [max_dis]
         fsub
         checklowy:
         fild dword [zerodata]
         fcomip
         jb myDestroy
-        fild dword [dis]
+        fild dword [max_dis]
         fadd
+        myDestroy: 
         fstp qword [y1]             ;new y place
-
-        ; xor eax,eax
-        ; mov eax,dword [CURR]
-        ; mov eax, [eax + 8]
-        ; shl eax,2
-        ; xor ebx,ebx
-        ; mov ebx, [dronesArray]
-        ; add ebx,eax
-        ; fld qword [y1]
-        ; add ebx,8
-        ; fstp qword [ebx]
+         fld qword [y1]
+         fstp qword [ebx+8]
 
 
-        myDestroy:
-            push ebp
-            mov ebp,esp
+        
+
             fld qword [xt]
             fld qword [x1]
             fsub 
@@ -347,11 +346,13 @@ section .text                           ; functions from c libary
         
 
 section .data
-    deg : dd 360
-    dis :dd 100
-    deg1 : dd 60
-    dis1 :dd 50
+    deg: equ 360
+    dis :equ 100
+    deg1 :equ  60
+    dis1 :equ 50
     halffeg :dd 180
+    max_dis : dd 100
+    max_deg : dd 360
     rad : dq 0.0174532925199433
     pi: dq 57.2957795130823209
     degree: dd 0

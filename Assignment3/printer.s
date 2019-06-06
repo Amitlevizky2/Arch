@@ -85,7 +85,6 @@ section .text                           ; functions from c libary
       call printf
       add esp, 36
       popad
-      ;print_drone_details dword [edi + 20], qword [edi + 16], qword [edi + 8], qword [edi], dword esi, droneDetailsStr
       inc esi
       add eax, dword 4
 
@@ -94,7 +93,7 @@ section .text                           ; functions from c libary
     mov eax, [CORS]
     mov esi,dword [schedulerCo]
     add eax, esi
-    add eax, [ebx]
+    mov  ebx, [eax]
     call resume
     jmp printer
 

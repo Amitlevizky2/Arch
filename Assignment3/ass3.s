@@ -121,6 +121,8 @@ section .text                           ; functions from c libary
      global targetCo
      global printerCo
      global resume
+     extern xt
+     extern yt
      extern drone
      extern target
      extern scheduler
@@ -157,6 +159,7 @@ main:
         callscanf seed, format_string_int, dword [eax + 24] ; Seed for initialization of LFSR shift register
         popad
     call AlcCoRoutins
+    call initTargetValues
     call initDronesArray
     call preInitCoLoop
     call startCo
@@ -240,6 +243,23 @@ main:
         endAlcCoRou:
 		ret
 
+
+    initTargetValues:
+        xor edx, edx
+        pushad
+        generate_num edx, distance                  ; Get X random value
+        popad
+        fld qword [res]
+        fstp qword [xt]                   ; put it at the place ebx point at
+ 
+        xor edx, edx
+        pushad
+        generate_num edx, distance                  ; Get Y random value
+        popad
+        fld qword [res]                             ; load res to the first cell in stack
+        fstp qword [yt]                   ; put it at the place ebx point at
+        ret
+
     
     initDronesArray:
         preInitDrone:
@@ -299,7 +319,6 @@ main:
         jmp initDroneLoop
         endDroneInit:
         ret
-
         
 
     preInitCoLoop:

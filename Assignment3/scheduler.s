@@ -39,6 +39,7 @@ section .text                           ; functions from c libary
       ;mov ebx, [eax + SPP]
       call resume
       xor edi, edi
+      xor esi, esi
       jmp schedulerLoop
 
 
