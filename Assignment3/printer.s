@@ -59,8 +59,8 @@ section .text                           ; functions from c libary
       popad
     mov ecx, dword [N]
     pushad
-    fild dword [yt]
-    fild dword [xt]
+    fld qword [yt]
+    fld qword [xt]
     sub esp, 16
     fstp qword [esp]
     fstp qword [esp+8]
@@ -73,9 +73,9 @@ section .text                           ; functions from c libary
       mov edi, dword [eax]
       pushad
       push dword [edi + 24]
-      fild dword [edi + 16]
-      fild dword [edi + 8]
-      fild dword [edi]
+      fld qword [edi + 16]
+      fld qword [edi + 8]
+      fld qword [edi]
       sub esp, 24
       fstp qword [esp]
       fstp qword [esp + 8]

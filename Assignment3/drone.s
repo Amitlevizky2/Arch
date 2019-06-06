@@ -89,13 +89,9 @@ section .text                           ; functions from c libary
      drone:
         
         finit
-                                xor esi, esi
-                                mov esi, [CORS]
-                                mov esi, [esi]
-                                mov esi, [esi +8]
+
         xor eax,eax
         mov eax,dword [CURR]
-        ;mov eax,dword [eax]
         mov eax, [eax + 8]
         shl eax,2
         xor ebx,ebx
@@ -134,6 +130,7 @@ section .text                           ; functions from c libary
         fldpi
         fmul
         fstp qword [alpha]
+    
         
 
      calc_dist: 
@@ -156,13 +153,26 @@ section .text                           ; functions from c libary
         jae checklowx
         fild dword [dis]
         fsub
+        jmp calcYsin
         checklowx:
-        fild dword [zerodata]
+        fld dword [zerodata]
         fcomip
         jb calcYsin
-        fild dword [dis]
+        fld dword [dis]
         fadd
         fstp qword [x1]             ;new x place
+
+        ; xor eax,eax
+        ; mov eax,dword [CURR]
+        ; mov eax, [eax + 8]
+        ; shl eax,2
+        ; xor ebx,ebx
+        ; mov ebx, [dronesArray]
+        ; add ebx,eax
+        ; fld qword [x1]
+        ; fstp qword [ebx]
+
+
         calcYsin:
 
         fld qword [alpha]       ;load angle into st0
@@ -172,8 +182,9 @@ section .text                           ; functions from c libary
         fmul qword [res]            ;st0 = cos(ang) * distance
         fstp qword [y2]             ; distance*cos(deg)
         fld qword [y1]
-        fadd qword [y2]
-        fild dword [dis]
+        fld qword [y2]
+        fadd
+        fld dword [dis]
         fcomip                      ;if new distance>100
         jae checklowy
         fild dword [dis]
@@ -184,8 +195,18 @@ section .text                           ; functions from c libary
         jb myDestroy
         fild dword [dis]
         fadd
-        fstp qword [y1]             ;new x place
-        
+        fstp qword [y1]             ;new y place
+
+        ; xor eax,eax
+        ; mov eax,dword [CURR]
+        ; mov eax, [eax + 8]
+        ; shl eax,2
+        ; xor ebx,ebx
+        ; mov ebx, [dronesArray]
+        ; add ebx,eax
+        ; fld qword [y1]
+        ; add ebx,8
+        ; fstp qword [ebx]
 
 
         myDestroy:
